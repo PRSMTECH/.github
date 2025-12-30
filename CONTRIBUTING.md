@@ -18,8 +18,8 @@ Thank you for your interest in contributing to PRSMTECH! This document provides 
 
 | Name | Role | GitHub |
 |------|------|--------|
-| **Prajj** | Backend Developer | @prajj |
-| **Bilal** | Backend Developer | @bilal |
+| **Prajj** | Backend Developer | @PrajjwalDatir |
+| **Bilal** | Backend Developer | @bilal-08 |
 
 ### Leadership
 
