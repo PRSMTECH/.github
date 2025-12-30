@@ -1,0 +1,209 @@
+# =============================================================================
+# PrsmTechInc CI Workflow
+# =============================================================================
+# Purpose: Continuous Integration for Next.js/TypeScript projects
+# Triggers: Push to main, Pull Requests to main
+#
+# This workflow ensures code quality through:
+#   - Linting (ESLint)
+#   - Type checking (TypeScript)
+#   - Unit/Integration tests
+#   - Production build verification
+#
+# Requirements:
+#   - pnpm as package manager
+#   - Node.js 20.x
+#   - TypeScript configured
+#   - ESLint configured
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    # Skip CI for documentation-only changes
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/*.md'
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # ===========================================================================
+  # Quality Checks Job
+  # ===========================================================================
+  quality:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # Checkout & Setup
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      # -----------------------------------------------------------------------
+      # Cache Configuration
+      # -----------------------------------------------------------------------
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
+      # -----------------------------------------------------------------------
+      # Install Dependencies
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # Quality Checks
+      # -----------------------------------------------------------------------
+      - name: Run ESLint
+        run: pnpm lint
+        continue-on-error: false
+
+      - name: Run TypeScript type check
+        run: pnpm type-check || pnpm tsc --noEmit
+        continue-on-error: false
+
+      - name: Run tests
+        run: pnpm test --passWithNoTests
+        env:
+          CI: true
+
+  # ===========================================================================
+  # Build Job
+  # ===========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+        env:
+          # Add any required build-time environment variables
+          NEXT_TELEMETRY_DISABLED: 1
+
+      # -----------------------------------------------------------------------
+      # Upload Build Artifacts (optional, for deployment)
+      # -----------------------------------------------------------------------
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            .next
+            !.next/cache
+          retention-days: 7
+
+  # ===========================================================================
+  # Status Check (for branch protection)
+  # ===========================================================================
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [quality, build]
+    if: always()
+
+    steps:
+      - name: Check job statuses
+        run: |
+          if [[ "${{ needs.quality.result }}" == "success" && "${{ needs.build.result }}" == "success" ]]; then
+            echo "All CI checks passed!"
+            exit 0
+          else
+            echo "CI checks failed"
+            echo "Quality: ${{ needs.quality.result }}"
+            echo "Build: ${{ needs.build.result }}"
+            exit 1
+          fi

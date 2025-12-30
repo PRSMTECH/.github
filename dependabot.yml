@@ -1,0 +1,234 @@
+# =============================================================================
+# PrsmTechInc Dependabot Configuration
+# =============================================================================
+# This file configures Dependabot to automatically create pull requests
+# for updating dependencies across the repository.
+#
+# Dependabot helps:
+#   - Keep dependencies up-to-date with security patches
+#   - Stay current with new features and bug fixes
+#   - Reduce technical debt from outdated packages
+#
+# Configuration Reference:
+#   https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# =============================================================================
+
+version: 2
+
+# =============================================================================
+# Global Registry Configuration
+# =============================================================================
+# Configure private registries if needed (uncomment and modify)
+#
+# registries:
+#   npm-private:
+#     type: npm-registry
+#     url: https://npm.pkg.github.com
+#     token: ${{ secrets.NPM_TOKEN }}
+
+updates:
+  # ===========================================================================
+  # npm Ecosystem (pnpm compatible)
+  # ===========================================================================
+  # Manages dependencies in package.json
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+
+    # Pull Request Configuration
+    open-pull-requests-limit: 10
+
+    # Commit Message Style
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps(dev)"
+      include: "scope"
+
+    # Labels for easy filtering
+    labels:
+      - "dependencies"
+      - "automated"
+
+    # Reviewers for dependency PRs
+    reviewers:
+      - "PrsmTechInc/developers"
+
+    # Assignees for dependency PRs
+    # assignees:
+    #   - "tech-lead-username"
+
+    # Versioning Strategy
+    versioning-strategy: "auto"
+
+    # Group minor and patch updates together to reduce PR noise
+    groups:
+      # Group all production dependencies
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group all development dependencies
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group React ecosystem updates
+      react:
+        patterns:
+          - "react*"
+          - "@types/react*"
+          - "next*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group TypeScript and ESLint updates
+      typescript-eslint:
+        patterns:
+          - "typescript"
+          - "@typescript-eslint/*"
+          - "eslint*"
+          - "@eslint/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group Tailwind CSS updates
+      tailwindcss:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "postcss*"
+          - "autoprefixer"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group testing dependencies
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "jest"
+          - "@jest/*"
+          - "@testing-library/*"
+          - "playwright"
+          - "@playwright/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+    # Ignore specific packages or versions
+    ignore:
+      # Ignore major version updates for critical packages (review manually)
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+      # Ignore alpha/beta/rc versions
+      - dependency-name: "*"
+        update-types: ["version-update:semver-prerelease"]
+
+  # ===========================================================================
+  # GitHub Actions
+  # ===========================================================================
+  # Manages workflow dependencies in .github/workflows/
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+
+    # Pull Request Configuration
+    open-pull-requests-limit: 5
+
+    # Commit Message Style
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+    # Labels for easy filtering
+    labels:
+      - "github-actions"
+      - "ci"
+      - "automated"
+
+    # Reviewers for GitHub Actions PRs
+    reviewers:
+      - "PrsmTechInc/leads"
+
+    # Group all Actions updates together
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ===========================================================================
+  # Docker (uncomment if using Dockerfiles)
+  # ===========================================================================
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #   labels:
+  #     - "docker"
+  #     - "dependencies"
+  #     - "automated"
+  #   reviewers:
+  #     - "PrsmTechInc/leads"
+
+  # ===========================================================================
+  # pip (uncomment if using Python)
+  # ===========================================================================
+  # - package-ecosystem: "pip"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "python"
+  #     - "dependencies"
+  #     - "automated"
+
+
+# =============================================================================
+# Notes:
+# =============================================================================
+#
+# How to handle Dependabot PRs:
+#   1. Review the changelog/release notes linked in the PR
+#   2. Check if the update includes breaking changes
+#   3. Run CI checks (they run automatically)
+#   4. Merge if all checks pass and changes are compatible
+#
+# For major version updates:
+#   - Dependabot will NOT auto-create PRs for major versions
+#   - Major updates require manual review due to potential breaking changes
+#   - Create a new branch and test thoroughly before merging
+#
+# Security Updates:
+#   - Dependabot automatically creates PRs for security vulnerabilities
+#   - These PRs are labeled with "security"
+#   - Prioritize security updates over regular dependency updates
+#
+# Reducing PR Noise:
+#   - Groups combine related updates into single PRs
+#   - Adjust the groups based on your project's needs
+#   - Consider increasing the interval if too many PRs are created
+# =============================================================================

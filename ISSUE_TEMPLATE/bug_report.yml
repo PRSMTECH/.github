@@ -1,0 +1,201 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in our software
+title: "[BUG]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+
+        Thank you for taking the time to report this issue. Please provide as much detail as possible to help us investigate and resolve the problem quickly.
+
+        ---
+
+  - type: input
+    id: summary
+    attributes:
+      label: Bug Summary
+      description: A clear and concise summary of the bug
+      placeholder: "e.g., Login button not responding on mobile devices"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Detailed Description
+      description: Provide a detailed description of the bug
+      placeholder: "Describe what happened and any context that might be relevant..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide step-by-step instructions to reproduce the issue
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: "The login button should navigate to the dashboard..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: "The button does not respond to clicks and no action occurs..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Environment Information
+
+        Please provide details about your environment to help us reproduce the issue.
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      description: Which browser were you using?
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Microsoft Edge
+        - Opera
+        - Brave
+        - Other (specify in additional context)
+        - N/A (not browser-based)
+    validations:
+      required: true
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser Version
+      description: What version of the browser? (Check Help > About in your browser)
+      placeholder: "e.g., 120.0.6099.109"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: Which operating system are you using?
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS Sonoma (14.x)
+        - macOS Ventura (13.x)
+        - macOS Monterey (12.x)
+        - Ubuntu/Linux
+        - iOS
+        - Android
+        - Other (specify in additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Application/Software Version
+      description: What version of our software are you using?
+      placeholder: "e.g., v2.1.0 or commit hash"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: device-type
+    attributes:
+      label: Device Type
+      description: What type of device are you using?
+      options:
+        - Desktop/Laptop
+        - Tablet
+        - Mobile Phone
+        - Other
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Additional Information
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Screen Recordings
+      description: |
+        If applicable, add screenshots or screen recordings to help explain the problem.
+        Tip: You can attach images by clicking this area to highlight it and then dragging files in.
+      placeholder: "Drag and drop images here or paste from clipboard..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages or Console Logs
+      description: If you see any error messages, please copy and paste them here
+      render: shell
+      placeholder: |
+        Paste any error messages or console output here...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: "Any other information that might be helpful..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Level
+      description: How severe is this bug?
+      options:
+        - Critical - Application is unusable
+        - High - Major functionality is broken
+        - Medium - Feature is impaired but workaround exists
+        - Low - Minor issue, cosmetic, or edge case
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues to ensure this bug has not already been reported
+          required: true
+        - label: I have provided all required information above
+          required: true
+        - label: I can reproduce this issue consistently
+          required: false

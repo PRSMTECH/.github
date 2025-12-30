@@ -1,0 +1,68 @@
+# =============================================================================
+# PrsmTechInc Funding Configuration
+# =============================================================================
+# This file configures the "Sponsor" button on the repository.
+# When users click the button, they'll see the funding platforms you support.
+#
+# Supported platforms:
+#   - github: GitHub Sponsors username(s)
+#   - patreon: Patreon username
+#   - open_collective: Open Collective username
+#   - ko_fi: Ko-fi username
+#   - tidelift: npm or pypi package name
+#   - community_bridge: Linux Foundation project name
+#   - liberapay: Liberapay username
+#   - issuehunt: IssueHunt username
+#   - polar: Polar username(s)
+#   - buy_me_a_coffee: Buy Me a Coffee username
+#   - custom: Up to 4 custom URLs
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+# =============================================================================
+
+
+# =============================================================================
+# GitHub Sponsors
+# =============================================================================
+# Enable GitHub Sponsors for the PrsmTechInc organization
+# Users can sponsor directly through GitHub
+#
+# To set up GitHub Sponsors:
+#   1. Go to https://github.com/sponsors/accounts
+#   2. Create a sponsor profile for PrsmTechInc
+#   3. Uncomment the line below
+
+github: PrsmTechInc
+
+
+# =============================================================================
+# Custom Funding Links
+# =============================================================================
+# Direct contact for custom enterprise sponsorship or partnership inquiries
+# Up to 4 custom URLs are supported
+
+custom:
+  - "https://prsmtechweb.com/contact"
+
+
+# =============================================================================
+# Other Platforms (uncomment if needed)
+# =============================================================================
+
+# Patreon - For recurring support and exclusive content
+# patreon: prsmtech
+
+# Ko-fi - For one-time tips
+# ko_fi: prsmtech
+
+# Buy Me a Coffee - For one-time support
+# buy_me_a_coffee: prsmtech
+
+# Open Collective - For transparent funding
+# open_collective: prsmtech
+
+# Liberapay - For recurring donations
+# liberapay: prsmtech
+
+# Polar - For open source funding
+# polar: PrsmTechInc

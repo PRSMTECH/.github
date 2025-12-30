@@ -1,0 +1,27 @@
+# GitHub Issue Template Configuration
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+# Allow blank issues for edge cases
+blank_issues_enabled: true
+
+# Contact links displayed in the issue template chooser
+contact_links:
+  - name: PRSMTECH Website
+    url: https://prsmtechweb.com
+    about: Visit our website to learn more about our services and schedule a consultation
+
+  - name: Book a Consultation
+    url: https://prsmtechweb.com/contact
+    about: Schedule a free consultation call to discuss your project requirements
+
+  - name: Documentation & Resources
+    url: https://prsmtechweb.com/resources
+    about: Access our documentation, guides, and helpful resources
+
+  - name: Support Portal
+    url: https://prsmtechweb.com/support
+    about: For existing clients - access our support portal for priority assistance
+
+  - name: General Questions
+    url: mailto:hello@prsmtechweb.com
+    about: Have a quick question? Send us an email directly

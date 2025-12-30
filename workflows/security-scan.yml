@@ -1,0 +1,212 @@
+# =============================================================================
+# PrsmTechInc Security Scanning Workflow
+# =============================================================================
+# Purpose: Automated security scanning for vulnerabilities and secrets
+# Triggers: Weekly schedule, Push to main, Pull Requests
+#
+# This workflow performs:
+#   - CodeQL analysis for JavaScript/TypeScript vulnerabilities
+#   - Dependency review for PR changes
+#   - Secret scanning (via GitHub Advanced Security)
+#   - npm audit for known vulnerabilities
+#
+# Security Best Practices:
+#   - Run on schedule to catch new CVEs
+#   - Block PRs with high/critical vulnerabilities
+#   - Alert on any detected secrets
+# =============================================================================
+
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    # Allow manual trigger for on-demand security audits
+
+# Ensure security scans have necessary permissions
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ===========================================================================
+  # CodeQL Analysis
+  # ===========================================================================
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+        # Add more languages if needed:
+        # - python
+        # - go
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Use extended security queries for more comprehensive scanning
+          queries: +security-extended,security-and-quality
+
+      # Autobuild attempts to build the project automatically
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ===========================================================================
+  # Dependency Review (PR only)
+  # ===========================================================================
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail on high and critical vulnerabilities
+          fail-on-severity: high
+          # Also check for license issues
+          deny-licenses: GPL-3.0, AGPL-3.0
+          # Allow some packages even if they have vulnerabilities
+          # allow-dependencies-licenses: 'pkg:npm/@some-package'
+          comment-summary-in-pr: always
+
+  # ===========================================================================
+  # npm Audit
+  # ===========================================================================
+  npm-audit:
+    name: npm Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run npm audit
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Generate audit report
+        if: always()
+        run: |
+          echo "## npm Audit Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          pnpm audit --json 2>/dev/null | jq -r '
+            if .advisories then
+              "| Package | Severity | Title |" ,
+              "|---------|----------|-------|" ,
+              (.advisories | to_entries[] |
+                "| \(.value.module_name) | \(.value.severity) | \(.value.title) |")
+            else
+              "No vulnerabilities found!"
+            end
+          ' >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # Secret Scanning Alert (informational)
+  # ===========================================================================
+  secret-scan-check:
+    name: Secret Scan Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for potential secrets
+        run: |
+          echo "## Secret Scanning Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Simple pattern matching for common secret patterns
+          # This supplements GitHub's built-in secret scanning
+
+          PATTERNS=(
+            "AKIA[0-9A-Z]{16}"  # AWS Access Key
+            "sk_live_[0-9a-zA-Z]{24}"  # Stripe Secret Key
+            "sk_test_[0-9a-zA-Z]{24}"  # Stripe Test Key
+            "ghp_[a-zA-Z0-9]{36}"  # GitHub Personal Access Token
+            "gho_[a-zA-Z0-9]{36}"  # GitHub OAuth Token
+            "xox[baprs]-[0-9a-zA-Z-]+"  # Slack Token
+          )
+
+          FOUND_SECRETS=0
+
+          for pattern in "${PATTERNS[@]}"; do
+            if git diff origin/main...HEAD | grep -qE "$pattern"; then
+              echo "⚠️ Potential secret pattern found matching: $pattern" >> $GITHUB_STEP_SUMMARY
+              FOUND_SECRETS=1
+            fi
+          done
+
+          if [ $FOUND_SECRETS -eq 0 ]; then
+            echo "✅ No obvious secret patterns detected in changes" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Please review the flagged patterns and ensure no actual secrets are being committed.**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # Security Summary
+  # ===========================================================================
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [codeql, npm-audit]
+    if: always()
+
+    steps:
+      - name: Generate Security Summary
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Analysis | ${{ needs.codeql.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm Audit | ${{ needs.npm-audit.result == 'success' && '✅ Passed' || '⚠️ Review' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "_Scan completed at: $(date -u)_" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,239 @@
+name: Client Project Inquiry
+description: Submit a project inquiry or request a consultation with PRSMTECH
+title: "[INQUIRY]: "
+labels: ["client-inquiry", "needs-response"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Client Project Inquiry
+
+        Thank you for your interest in working with **PRSMTECH**! We specialize in custom software development, AI automation, and Google Workspace solutions.
+
+        Please fill out the form below and our team will respond within **1-2 business days**.
+
+        ---
+
+        > **Need immediate assistance?** Visit [prsmtechweb.com](https://prsmtechweb.com) to schedule a consultation call.
+
+  - type: input
+    id: company-name
+    attributes:
+      label: Company / Organization Name
+      description: Your company or organization name
+      placeholder: "e.g., Acme Corporation"
+    validations:
+      required: true
+
+  - type: input
+    id: contact-name
+    attributes:
+      label: Contact Name
+      description: Primary point of contact for this inquiry
+      placeholder: "e.g., John Smith"
+    validations:
+      required: true
+
+  - type: input
+    id: email
+    attributes:
+      label: Email Address
+      description: Best email address to reach you
+      placeholder: "e.g., john@company.com"
+    validations:
+      required: true
+
+  - type: input
+    id: phone
+    attributes:
+      label: Phone Number (Optional)
+      description: Phone number if you prefer a call
+      placeholder: "e.g., (555) 123-4567"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Project Details
+
+  - type: dropdown
+    id: project-type
+    attributes:
+      label: Project Type
+      description: What type of project are you interested in?
+      options:
+        - Custom Software Development
+        - AI Automation & Integration
+        - Google Workspace Solutions
+        - Website / Web Application
+        - Mobile Application
+        - CRM / Business System
+        - E-commerce Platform
+        - API Development & Integration
+        - Consulting / Technical Advisory
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: business-description
+    attributes:
+      label: Business Description
+      description: Tell us about your business and what you're looking to achieve
+      placeholder: |
+        Please describe:
+        - Your business or industry
+        - Current challenges or pain points
+        - What you're hoping to accomplish with this project
+    validations:
+      required: true
+
+  - type: textarea
+    id: project-scope
+    attributes:
+      label: Project Scope & Requirements
+      description: Describe your project requirements in as much detail as possible
+      placeholder: |
+        Include information such as:
+        - Key features or functionality needed
+        - Target users or audience
+        - Any existing systems to integrate with
+        - Specific technologies or platforms preferred
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Timeline & Budget
+
+  - type: dropdown
+    id: timeline
+    attributes:
+      label: Desired Timeline
+      description: When do you need this project completed?
+      options:
+        - ASAP / Urgent (< 2 weeks)
+        - Short-term (1-2 months)
+        - Medium-term (2-4 months)
+        - Long-term (4-6 months)
+        - Flexible / No specific deadline
+        - Ongoing / Retainer basis
+    validations:
+      required: true
+
+  - type: dropdown
+    id: budget-range
+    attributes:
+      label: Budget Range
+      description: What is your estimated budget for this project?
+      options:
+        - Under $5,000
+        - $5,000 - $10,000
+        - $10,000 - $25,000
+        - $25,000 - $50,000
+        - $50,000 - $100,000
+        - $100,000+
+        - Not sure / Need consultation
+        - Prefer not to disclose
+    validations:
+      required: true
+
+  - type: dropdown
+    id: engagement-type
+    attributes:
+      label: Engagement Type
+      description: What type of engagement are you looking for?
+      options:
+        - Fixed-price project
+        - Hourly / Time & Materials
+        - Monthly retainer
+        - Consultation first, then decide
+        - Not sure yet
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Additional Information
+
+  - type: textarea
+    id: existing-resources
+    attributes:
+      label: Existing Resources
+      description: Do you have any existing assets, documentation, or resources to share?
+      placeholder: |
+        Examples:
+        - Existing website or application
+        - Design mockups or wireframes
+        - Technical documentation
+        - Brand guidelines
+    validations:
+      required: false
+
+  - type: dropdown
+    id: how-found-us
+    attributes:
+      label: How Did You Find Us?
+      description: How did you hear about PRSMTECH?
+      options:
+        - Google / Search Engine
+        - Referral from a friend or colleague
+        - Social Media (LinkedIn, Twitter, etc.)
+        - GitHub
+        - Previous work together
+        - Industry event or conference
+        - Other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: contact-preference
+    attributes:
+      label: Preferred Contact Method
+      description: How would you prefer we contact you?
+      options:
+        - Email
+        - Phone call
+        - Video call (Zoom/Google Meet)
+        - No preference
+    validations:
+      required: true
+
+  - type: input
+    id: preferred-time
+    attributes:
+      label: Best Time to Contact (Optional)
+      description: What times work best for you? Include your timezone.
+      placeholder: "e.g., Weekdays 10am-4pm EST"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes
+      description: Anything else you'd like us to know?
+      placeholder: "Any other details, questions, or specific requirements..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: agreements
+    attributes:
+      label: Acknowledgments
+      description: Please confirm the following
+      options:
+        - label: I understand that submitting this form does not guarantee project acceptance
+          required: true
+        - label: I consent to PRSMTECH contacting me regarding this inquiry
+          required: true
+        - label: I have read the [Privacy Policy](https://prsmtechweb.com/privacy) and agree to the terms
+          required: true

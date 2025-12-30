@@ -1,0 +1,140 @@
+# =============================================================================
+# PrsmTechInc CODEOWNERS
+# =============================================================================
+# This file defines the code owners for the repository. Code owners are
+# automatically requested for review when someone opens a pull request
+# that modifies code they own.
+#
+# CODEOWNERS Structure:
+#   - Each line is a file pattern followed by one or more owners
+#   - The last matching pattern takes precedence
+#   - Owners can be @username, @org/team, or email addresses
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# =============================================================================
+
+
+# =============================================================================
+# Default Owners - Applies to all files unless overridden below
+# =============================================================================
+# General team reviews all changes by default
+*                               @PrsmTechInc/developers
+
+
+# =============================================================================
+# Backend Code - @prajj and @bilal are primary reviewers
+# =============================================================================
+# These team members have expertise in server-side code, APIs, and database logic
+
+# API routes and handlers
+/api/                           @prajj @bilal
+**/api/                         @prajj @bilal
+
+# Server-side code directories
+/server/                        @prajj @bilal
+**/server/                      @prajj @bilal
+
+# Server-side libraries and utilities
+/lib/server/                    @prajj @bilal
+**/lib/server/                  @prajj @bilal
+
+# Database schema and migrations
+/prisma/                        @prajj @bilal
+/drizzle/                       @prajj @bilal
+**/schema/                      @prajj @bilal
+**/migrations/                  @prajj @bilal
+
+# Supabase configuration
+/supabase/                      @prajj @bilal
+
+# Server actions (Next.js App Router)
+**/actions/                     @prajj @bilal
+**/actions.ts                   @prajj @bilal
+**/actions.tsx                  @prajj @bilal
+
+
+# =============================================================================
+# Infrastructure & DevOps
+# =============================================================================
+# Workflow and CI/CD changes require careful review
+
+/.github/                       @PrsmTechInc/leads
+/docker/                        @PrsmTechInc/leads
+docker-compose*.yml             @PrsmTechInc/leads
+Dockerfile*                     @PrsmTechInc/leads
+*.dockerfile                    @PrsmTechInc/leads
+
+# Vercel configuration
+vercel.json                     @PrsmTechInc/leads
+
+
+# =============================================================================
+# Configuration Files - Require careful review
+# =============================================================================
+# These files affect the entire project
+
+package.json                    @PrsmTechInc/leads
+pnpm-lock.yaml                  @PrsmTechInc/leads
+tsconfig.json                   @PrsmTechInc/leads
+next.config.js                  @PrsmTechInc/leads
+next.config.mjs                 @PrsmTechInc/leads
+next.config.ts                  @PrsmTechInc/leads
+tailwind.config.*               @PrsmTechInc/leads
+.env.example                    @PrsmTechInc/leads
+
+
+# =============================================================================
+# Security-Sensitive Files - Require lead approval
+# =============================================================================
+# Changes to auth and security require elevated review
+
+**/auth/                        @PrsmTechInc/leads @prajj @bilal
+**/middleware.ts                @PrsmTechInc/leads @prajj @bilal
+**/middleware.js                @PrsmTechInc/leads @prajj @bilal
+
+
+# =============================================================================
+# Documentation
+# =============================================================================
+# Documentation can be reviewed by any team member
+
+*.md                            @PrsmTechInc/developers
+/docs/                          @PrsmTechInc/developers
+README*                         @PrsmTechInc/developers
+
+
+# =============================================================================
+# Frontend Code
+# =============================================================================
+# Frontend changes can be reviewed by the general developer team
+
+/components/                    @PrsmTechInc/developers
+/app/                           @PrsmTechInc/developers
+/pages/                         @PrsmTechInc/developers
+/styles/                        @PrsmTechInc/developers
+/hooks/                         @PrsmTechInc/developers
+/lib/                           @PrsmTechInc/developers
+/utils/                         @PrsmTechInc/developers
+*.css                           @PrsmTechInc/developers
+*.scss                          @PrsmTechInc/developers
+
+
+# =============================================================================
+# Notes:
+# =============================================================================
+#
+# Team Structure (adjust based on your GitHub org):
+#   @PrsmTechInc/leads      - Tech leads and senior developers
+#   @PrsmTechInc/developers - All developers (frontend + backend)
+#   @prajj                  - Backend specialist
+#   @bilal                  - Backend specialist
+#
+# To set up teams in your GitHub organization:
+#   1. Go to https://github.com/orgs/PrsmTechInc/teams
+#   2. Create the teams mentioned above
+#   3. Add appropriate members to each team
+#
+# If teams don't exist yet, you can use individual usernames:
+#   Replace @PrsmTechInc/developers with @username1 @username2 @username3
+#   Replace @PrsmTechInc/leads with @lead-username
+# =============================================================================
