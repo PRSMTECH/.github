@@ -22,35 +22,35 @@
 
 
 # =============================================================================
-# Backend Code - @prajj and @bilal are primary reviewers
+# Backend Code - @PrajjwalDatir and @bilal-08 are primary reviewers
 # =============================================================================
 # These team members have expertise in server-side code, APIs, and database logic
 
 # API routes and handlers
-/api/                           @prajj @bilal
-**/api/                         @prajj @bilal
+/api/                           @PrajjwalDatir @bilal-08
+**/api/                         @PrajjwalDatir @bilal-08
 
 # Server-side code directories
-/server/                        @prajj @bilal
-**/server/                      @prajj @bilal
+/server/                        @PrajjwalDatir @bilal-08
+**/server/                      @PrajjwalDatir @bilal-08
 
 # Server-side libraries and utilities
-/lib/server/                    @prajj @bilal
-**/lib/server/                  @prajj @bilal
+/lib/server/                    @PrajjwalDatir @bilal-08
+**/lib/server/                  @PrajjwalDatir @bilal-08
 
 # Database schema and migrations
-/prisma/                        @prajj @bilal
-/drizzle/                       @prajj @bilal
-**/schema/                      @prajj @bilal
-**/migrations/                  @prajj @bilal
+/prisma/                        @PrajjwalDatir @bilal-08
+/drizzle/                       @PrajjwalDatir @bilal-08
+**/schema/                      @PrajjwalDatir @bilal-08
+**/migrations/                  @PrajjwalDatir @bilal-08
 
 # Supabase configuration
-/supabase/                      @prajj @bilal
+/supabase/                      @PrajjwalDatir @bilal-08
 
 # Server actions (Next.js App Router)
-**/actions/                     @prajj @bilal
-**/actions.ts                   @prajj @bilal
-**/actions.tsx                  @prajj @bilal
+**/actions/                     @PrajjwalDatir @bilal-08
+**/actions.ts                   @PrajjwalDatir @bilal-08
+**/actions.tsx                  @PrajjwalDatir @bilal-08
 
 
 # =============================================================================
@@ -88,9 +88,9 @@ tailwind.config.*               @PrsmTechInc/leads
 # =============================================================================
 # Changes to auth and security require elevated review
 
-**/auth/                        @PrsmTechInc/leads @prajj @bilal
-**/middleware.ts                @PrsmTechInc/leads @prajj @bilal
-**/middleware.js                @PrsmTechInc/leads @prajj @bilal
+**/auth/                        @PrsmTechInc/leads @PrajjwalDatir @bilal-08
+**/middleware.ts                @PrsmTechInc/leads @PrajjwalDatir @bilal-08
+**/middleware.js                @PrsmTechInc/leads @PrajjwalDatir @bilal-08
 
 
 # =============================================================================
@@ -126,8 +126,8 @@ README*                         @PrsmTechInc/developers
 # Team Structure (adjust based on your GitHub org):
 #   @PrsmTechInc/leads      - Tech leads and senior developers
 #   @PrsmTechInc/developers - All developers (frontend + backend)
-#   @prajj                  - Backend specialist
-#   @bilal                  - Backend specialist
+#   @PrajjwalDatir                  - Backend specialist
+#   @bilal-08                  - Backend specialist
 #
 # To set up teams in your GitHub organization:
 #   1. Go to https://github.com/orgs/PrsmTechInc/teams
