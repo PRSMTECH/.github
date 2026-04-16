@@ -10,7 +10,7 @@ on:
 
 jobs:
   jira-sync:
-    uses: PRSMTECH/.github/.github/workflows/jira-sync-reusable.yml@main
+    uses: PRSMTECH/.github/workflows/jira-sync-reusable.yml@main
     with:
       slack_channel_id: 'C0ARPUFUY0M'
       slack_channel_name: 'ios-doubleview'

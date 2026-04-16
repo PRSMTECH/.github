@@ -9,6 +9,6 @@ on:
 
 jobs:
   automate:
-    uses: PrsmTechInc/.github/.github/workflows/pr-automation-reusable.yml@main
+    uses: PRSMTECH/.github/workflows/pr-automation-reusable.yml@main
     with:
       default_reviewer: 'MrJPTech'

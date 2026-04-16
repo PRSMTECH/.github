@@ -9,7 +9,7 @@ on:
 
 jobs:
   notify:
-    uses: PrsmTechInc/.github/.github/workflows/slack-notify-reusable.yml@main
+    uses: PRSMTECH/.github/workflows/slack-notify-reusable.yml@main
     with:
       channel_id: 'C0ARPUFUY0M'
       message: 'New push to main in ${{ github.repository }} by ${{ github.actor }}'
