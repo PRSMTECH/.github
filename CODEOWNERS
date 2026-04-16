@@ -22,35 +22,35 @@
 
 
 # =============================================================================
-# Backend Code - @PrajjwalDatir and @bilal-08 are primary reviewers
+# Backend Code - @prsmbackendz (Prajj) is primary reviewer
 # =============================================================================
-# These team members have expertise in server-side code, APIs, and database logic
+# Updated 2026-03-01: Removed @bilal (off team), fixed @prajj → @prsmbackendz
 
 # API routes and handlers
-/api/                           @PrajjwalDatir @bilal-08
-**/api/                         @PrajjwalDatir @bilal-08
+/api/                           @prsmbackendz
+**/api/                         @prsmbackendz
 
 # Server-side code directories
-/server/                        @PrajjwalDatir @bilal-08
-**/server/                      @PrajjwalDatir @bilal-08
+/server/                        @prsmbackendz
+**/server/                      @prsmbackendz
 
 # Server-side libraries and utilities
-/lib/server/                    @PrajjwalDatir @bilal-08
-**/lib/server/                  @PrajjwalDatir @bilal-08
+/lib/server/                    @prsmbackendz
+**/lib/server/                  @prsmbackendz
 
 # Database schema and migrations
-/prisma/                        @PrajjwalDatir @bilal-08
-/drizzle/                       @PrajjwalDatir @bilal-08
-**/schema/                      @PrajjwalDatir @bilal-08
-**/migrations/                  @PrajjwalDatir @bilal-08
+/prisma/                        @prsmbackendz
+/drizzle/                       @prsmbackendz
+**/schema/                      @prsmbackendz
+**/migrations/                  @prsmbackendz
 
 # Supabase configuration
-/supabase/                      @PrajjwalDatir @bilal-08
+/supabase/                      @prsmbackendz
 
 # Server actions (Next.js App Router)
-**/actions/                     @PrajjwalDatir @bilal-08
-**/actions.ts                   @PrajjwalDatir @bilal-08
-**/actions.tsx                  @PrajjwalDatir @bilal-08
+**/actions/                     @prsmbackendz
+**/actions.ts                   @prsmbackendz
+**/actions.tsx                  @prsmbackendz
 
 
 # =============================================================================
@@ -84,13 +84,13 @@ tailwind.config.*               @PrsmTechInc/leads
 
 
 # =============================================================================
-# Security-Sensitive Files - Require lead approval
+# Security-Sensitive Files - Require lead (Jordan) approval ONLY
 # =============================================================================
-# Changes to auth and security require elevated review
+# Updated 2026-03-01: Removed Prajj + Bilal from auth/middleware review (trust concern)
 
-**/auth/                        @PrsmTechInc/leads @PrajjwalDatir @bilal-08
-**/middleware.ts                @PrsmTechInc/leads @PrajjwalDatir @bilal-08
-**/middleware.js                @PrsmTechInc/leads @PrajjwalDatir @bilal-08
+**/auth/                        @MrJPTech
+**/middleware.ts                @MrJPTech
+**/middleware.js                @MrJPTech
 
 
 # =============================================================================
@@ -123,11 +123,12 @@ README*                         @PrsmTechInc/developers
 # Notes:
 # =============================================================================
 #
-# Team Structure (adjust based on your GitHub org):
-#   @PrsmTechInc/leads      - Tech leads and senior developers
+# Team Structure (updated 2026-03-01):
+#   @MrJPTech               - Jordan Ward (CEO/Owner, all security + config)
+#   @PrsmTechInc/leads      - Tech leads (currently Jordan only)
 #   @PrsmTechInc/developers - All developers (frontend + backend)
-#   @PrajjwalDatir                  - Backend specialist
-#   @bilal-08                  - Backend specialist
+#   @prsmbackendz           - Prajjwal Datir (Developer, backend)
+#   @prsmteamz              - Manan Jain (Developer, Android)
 #
 # To set up teams in your GitHub organization:
 #   1. Go to https://github.com/orgs/PrsmTechInc/teams
