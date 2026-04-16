@@ -1,0 +1,256 @@
+# =============================================================================
+# PrsmTechInc Reusable Jira Sync Workflow
+# =============================================================================
+# Purpose: Sync GitHub PRs with Jira issues -- transitions, comments, Slack
+# Usage: Called via workflow_call from any PRSMTECH repo
+#
+# Features:
+#   - Extract Jira key (e.g. KAN-123) from PR title or branch name
+#   - PR opened: transition to In Progress, comment on Jira, notify Slack
+#   - PR merged: transition to Done, comment with merge info, notify Slack
+#   - Slack Bot API (chat.postMessage) for proper <@USERID> mentions
+#   - ASCII-only Slack messages (no unicode bullets or em-dashes)
+#   - Language-agnostic -- works for any repo (Swift, Kotlin, TS, Python)
+#
+# Transition IDs (KAN team-managed project):
+#   To Do=11, In Progress=21, Code Review=31, QA=2, Done=41, Blocked=3
+#
+# Requirements:
+#   - JIRA_API_TOKEN secret (admin@prsmtech.com API token)
+#   - SLACK_BOT_TOKEN secret (BoltxPrsm app, chat:write scope)
+# =============================================================================
+
+name: Jira Sync (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      jira_site:
+        description: 'Jira Cloud site (e.g. boltgroup.atlassian.net)'
+        required: false
+        type: string
+        default: 'boltgroup.atlassian.net'
+      jira_email:
+        description: 'Jira account email for API auth'
+        required: false
+        type: string
+        default: 'admin@prsmtech.com'
+      jira_project:
+        description: 'Jira project key prefix (e.g. KAN, MFLP)'
+        required: false
+        type: string
+        default: 'KAN'
+      slack_channel_id:
+        description: 'Slack channel ID for notifications'
+        required: false
+        type: string
+        default: 'C0ARPUFUY0M'
+      slack_channel_name:
+        description: 'Slack channel name (for logging only)'
+        required: false
+        type: string
+        default: 'ios-doubleview'
+      transition_in_progress:
+        description: 'Jira transition ID for In Progress'
+        required: false
+        type: string
+        default: '21'
+      transition_done:
+        description: 'Jira transition ID for Done'
+        required: false
+        type: string
+        default: '41'
+    secrets:
+      JIRA_API_TOKEN:
+        required: true
+      SLACK_BOT_TOKEN:
+        required: true
+
+jobs:
+  # ===========================================================================
+  # Job 1: Extract Jira issue key from PR title or branch name
+  # ===========================================================================
+  extract-jira-key:
+    name: Extract Jira Key
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      key: ${{ steps.extract.outputs.key }}
+    steps:
+      - name: Extract Jira key from PR
+        id: extract
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          PROJECT="${{ inputs.jira_project }}"
+
+          # Match PROJECT-digits pattern in title first, then branch
+          KEY=$(echo "$PR_TITLE $BRANCH" | grep -oE "${PROJECT}-[0-9]+" | head -1)
+
+          if [ -n "$KEY" ]; then
+            echo "key=$KEY" >> "$GITHUB_OUTPUT"
+            echo "Found Jira key: $KEY"
+          else
+            echo "key=" >> "$GITHUB_OUTPUT"
+            echo "No Jira key found in PR title or branch"
+          fi
+
+  # ===========================================================================
+  # Job 2: PR Opened -> In Progress + Jira comment + Slack
+  # ===========================================================================
+  pr-opened:
+    name: PR Opened
+    runs-on: ubuntu-latest
+    needs: extract-jira-key
+    if: |
+      github.event.action == 'opened' &&
+      needs.extract-jira-key.outputs.key != ''
+    steps:
+      - name: Transition to In Progress + Comment + Notify
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          JIRA_SITE: ${{ inputs.jira_site }}
+          JIRA_EMAIL: ${{ inputs.jira_email }}
+          CHANNEL_ID: ${{ inputs.slack_channel_id }}
+          CHANNEL_NAME: ${{ inputs.slack_channel_name }}
+          TRANSITION_ID: ${{ inputs.transition_in_progress }}
+        run: |
+          KEY="${{ needs.extract-jira-key.outputs.key }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          REPO="${{ github.repository }}"
+
+          echo "=== Transitioning $KEY to In Progress ==="
+
+          # --- Jira: Transition to In Progress ---
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://${JIRA_SITE}/rest/api/3/issue/${KEY}/transitions" \
+            -d "{\"transition\":{\"id\":\"${TRANSITION_ID}\"}}")
+          echo "Transition response: $HTTP_CODE"
+
+          # --- Jira: Add comment ---
+          COMMENT_TEXT="PR opened by ${AUTHOR}: ${PR_TITLE} -- ${PR_URL}"
+          COMMENT_JSON=$(jq -n \
+            --arg text "$COMMENT_TEXT" \
+            '{body:{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:$text}]}]}}')
+
+          curl -s -o /dev/null -X POST \
+            -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://${JIRA_SITE}/rest/api/3/issue/${KEY}/comment" \
+            -d "$COMMENT_JSON"
+          echo "Jira comment added"
+
+          # --- Slack: Notify via Bot API ---
+          REPO_SHORT="${REPO##*/}"
+          SLACK_TEXT="PR opened for ${KEY} in ${REPO_SHORT}\n- ${PR_TITLE}\n- Author: ${AUTHOR}\n- ${PR_URL}"
+
+          SLACK_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg ch "$CHANNEL_ID" --arg txt "$SLACK_TEXT" '{channel:$ch,text:$txt}')" \
+            https://slack.com/api/chat.postMessage)
+
+          SLACK_OK=$(echo "$SLACK_RESPONSE" | jq -r '.ok')
+          if [ "$SLACK_OK" = "true" ]; then
+            echo "Slack notified (#${CHANNEL_NAME})"
+          else
+            SLACK_ERR=$(echo "$SLACK_RESPONSE" | jq -r '.error // "unknown"')
+            echo "::warning::Slack error: ${SLACK_ERR}"
+          fi
+
+          echo "=== Done: $KEY -> In Progress ==="
+
+  # ===========================================================================
+  # Job 3: PR Merged -> Done + Jira comment + Slack
+  # ===========================================================================
+  pr-merged:
+    name: PR Merged
+    runs-on: ubuntu-latest
+    needs: extract-jira-key
+    if: |
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      needs.extract-jira-key.outputs.key != ''
+    steps:
+      - name: Transition to Done + Comment + Notify
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          JIRA_SITE: ${{ inputs.jira_site }}
+          JIRA_EMAIL: ${{ inputs.jira_email }}
+          CHANNEL_ID: ${{ inputs.slack_channel_id }}
+          CHANNEL_NAME: ${{ inputs.slack_channel_name }}
+          TRANSITION_ID: ${{ inputs.transition_done }}
+        run: |
+          KEY="${{ needs.extract-jira-key.outputs.key }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+          MERGED_BY="${{ github.event.pull_request.merged_by.login }}"
+          REPO="${{ github.repository }}"
+
+          echo "=== Transitioning $KEY to Done ==="
+
+          # --- Jira: Add merge comment ---
+          COMMENT_TEXT="Merged PR #${PR_NUM}: ${PR_TITLE} -- ${PR_URL}"
+          COMMENT_JSON=$(jq -n \
+            --arg text "$COMMENT_TEXT" \
+            '{body:{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:$text,marks:[{type:"strong"}]}]}]}}')
+
+          curl -s -o /dev/null -X POST \
+            -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://${JIRA_SITE}/rest/api/3/issue/${KEY}/comment" \
+            -d "$COMMENT_JSON"
+          echo "Jira merge comment added"
+
+          # --- Jira: Transition to Done ---
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://${JIRA_SITE}/rest/api/3/issue/${KEY}/transitions" \
+            -d "{\"transition\":{\"id\":\"${TRANSITION_ID}\"}}")
+          echo "Transition response: $HTTP_CODE"
+
+          # --- Slack: Notify via Bot API with @mentions ---
+          # Slack user ID map
+          declare -A USER_MAP
+          USER_MAP[mrjptech]="U0AR9HCHT9R"
+          USER_MAP[swizzimatic]="U0AR9HCHT9R"
+          USER_MAP[usman-dev]="U0ARBVCRGG7"
+          USER_MAP[asad]="U0ARC007WBZ"
+          USER_MAP[deansloves]="U0ARQ1AUFLM"
+
+          # Resolve merged_by to Slack @mention
+          MERGED_LOWER=$(echo "$MERGED_BY" | tr '[:upper:]' '[:lower:]')
+          MERGED_UID="${USER_MAP[$MERGED_LOWER]}"
+          if [ -n "$MERGED_UID" ]; then
+            MERGED_DISPLAY="<@${MERGED_UID}>"
+          else
+            MERGED_DISPLAY="${MERGED_BY}"
+          fi
+
+          REPO_SHORT="${REPO##*/}"
+          SLACK_TEXT="Merged ${KEY} in ${REPO_SHORT}\n- ${PR_TITLE}\n- PR #${PR_NUM} merged by ${MERGED_DISPLAY}\n- ${PR_URL}"
+
+          SLACK_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg ch "$CHANNEL_ID" --arg txt "$SLACK_TEXT" '{channel:$ch,text:$txt}')" \
+            https://slack.com/api/chat.postMessage)
+
+          SLACK_OK=$(echo "$SLACK_RESPONSE" | jq -r '.ok')
+          if [ "$SLACK_OK" = "true" ]; then
+            echo "Slack notified (#${CHANNEL_NAME})"
+          else
+            SLACK_ERR=$(echo "$SLACK_RESPONSE" | jq -r '.error // "unknown"')
+            echo "::warning::Slack error: ${SLACK_ERR}"
+          fi
+
+          echo "=== Done: $KEY -> Done ==="

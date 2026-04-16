@@ -1,0 +1,189 @@
+# =============================================================================
+# PrsmTechInc Stale PR & Issue Cleanup Workflow
+# =============================================================================
+# Purpose: Manage stale PRs and issues across key PRSMTECH repos
+# Triggers: Weekly schedule (Monday 9 AM PDT) and manual dispatch
+#
+# Rules:
+#   PRs:
+#     - 14 days inactive -> label "stale" + warning comment
+#     - 7 more days inactive -> close with comment
+#   Issues:
+#     - 30 days inactive -> label "stale"
+#     - 14 more days inactive -> close
+#   Protected labels (never close):
+#     - keep-open, in-progress, blocked
+# =============================================================================
+
+name: Stale Cleanup
+
+on:
+  schedule:
+    # Monday 9 AM PDT = 16:00 UTC
+    - cron: '0 16 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  ORG: 'PrsmTechInc'
+
+jobs:
+  # ===========================================================================
+  # Stale PR and Issue Cleanup
+  # ===========================================================================
+  stale-cleanup:
+    name: Stale Cleanup
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - double-you-ios
+          - double-you-android
+          - prsm-business
+
+    steps:
+      - name: Process stale items in ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ env.ORG }}/${{ matrix.repo }}"
+          NOW=$(date -u +%s)
+          PROTECTED_LABELS="keep-open|in-progress|blocked"
+
+          STALE_COUNT=0
+          CLOSED_COUNT=0
+
+          echo "## Stale Cleanup: ${{ matrix.repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # ---------------------------------------------------------------
+          # Helper: check if item has a protected label
+          # ---------------------------------------------------------------
+          has_protected_label() {
+            local labels="$1"
+            echo "${labels}" | grep -qE "(${PROTECTED_LABELS})"
+          }
+
+          # ---------------------------------------------------------------
+          # Helper: get seconds since last update
+          # ---------------------------------------------------------------
+          seconds_since() {
+            local updated_at="$1"
+            local updated_epoch
+            updated_epoch=$(date -u -d "${updated_at}" +%s 2>/dev/null || date -u -jf "%Y-%m-%dT%H:%M:%SZ" "${updated_at}" +%s 2>/dev/null || echo "0")
+            echo $(( NOW - updated_epoch ))
+          }
+
+          # ===============================================================
+          # Process Pull Requests
+          # ===============================================================
+          echo "### Pull Requests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          PRS=$(gh api "repos/${REPO}/pulls?state=open&sort=updated&direction=asc&per_page=100" 2>/dev/null || echo "[]")
+          PR_COUNT=$(echo "${PRS}" | jq 'length')
+
+          for i in $(seq 0 $(( PR_COUNT - 1 ))); do
+            PR_NUMBER=$(echo "${PRS}" | jq -r ".[$i].number")
+            PR_TITLE=$(echo "${PRS}" | jq -r ".[$i].title")
+            PR_UPDATED=$(echo "${PRS}" | jq -r ".[$i].updated_at")
+            PR_LABELS=$(echo "${PRS}" | jq -r ".[$i].labels[].name" | tr '\n' '|')
+            ELAPSED=$(seconds_since "${PR_UPDATED}")
+
+            # Skip protected labels
+            if has_protected_label "${PR_LABELS}"; then
+              continue
+            fi
+
+            DAYS_INACTIVE=$(( ELAPSED / 86400 ))
+
+            # Check if already stale
+            IS_STALE=$(echo "${PR_LABELS}" | grep -c "stale" || true)
+
+            if [ "${IS_STALE}" -gt 0 ] && [ "${DAYS_INACTIVE}" -ge 7 ]; then
+              # Stale + 7 more days -> close
+              gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+                -f body="This PR has been closed due to 7 days of inactivity after being marked stale. Feel free to reopen if work resumes." \
+                >/dev/null 2>&1
+              gh api "repos/${REPO}/pulls/${PR_NUMBER}" \
+                -X PATCH -f state="closed" \
+                >/dev/null 2>&1
+              CLOSED_COUNT=$(( CLOSED_COUNT + 1 ))
+              echo "- Closed PR #${PR_NUMBER}: ${PR_TITLE} (${DAYS_INACTIVE} days inactive)" >> $GITHUB_STEP_SUMMARY
+
+            elif [ "${IS_STALE}" -eq 0 ] && [ "${DAYS_INACTIVE}" -ge 14 ]; then
+              # 14 days inactive -> label stale + comment
+              gh api "repos/${REPO}/issues/${PR_NUMBER}/labels" \
+                -X POST --input - <<< '["stale"]' \
+                >/dev/null 2>&1
+              gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+                -f body="This PR has been inactive for 14 days. It will be closed in 7 days if no activity." \
+                >/dev/null 2>&1
+              STALE_COUNT=$(( STALE_COUNT + 1 ))
+              echo "- Marked stale PR #${PR_NUMBER}: ${PR_TITLE} (${DAYS_INACTIVE} days)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          # ===============================================================
+          # Process Issues
+          # ===============================================================
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Issues" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          ISSUES=$(gh api "repos/${REPO}/issues?state=open&sort=updated&direction=asc&per_page=100" 2>/dev/null || echo "[]")
+          # Filter out pull requests (GitHub API includes PRs in issues)
+          ISSUE_COUNT=$(echo "${ISSUES}" | jq '[.[] | select(.pull_request == null)] | length')
+
+          for i in $(seq 0 $(( ISSUE_COUNT - 1 ))); do
+            ITEM=$(echo "${ISSUES}" | jq "[.[] | select(.pull_request == null)][$i]")
+            ISSUE_NUMBER=$(echo "${ITEM}" | jq -r '.number')
+            ISSUE_TITLE=$(echo "${ITEM}" | jq -r '.title')
+            ISSUE_UPDATED=$(echo "${ITEM}" | jq -r '.updated_at')
+            ISSUE_LABELS=$(echo "${ITEM}" | jq -r '.labels[].name' | tr '\n' '|')
+            ELAPSED=$(seconds_since "${ISSUE_UPDATED}")
+
+            # Skip protected labels
+            if has_protected_label "${ISSUE_LABELS}"; then
+              continue
+            fi
+
+            DAYS_INACTIVE=$(( ELAPSED / 86400 ))
+
+            # Check if already stale
+            IS_STALE=$(echo "${ISSUE_LABELS}" | grep -c "stale" || true)
+
+            if [ "${IS_STALE}" -gt 0 ] && [ "${DAYS_INACTIVE}" -ge 14 ]; then
+              # Stale + 14 more days -> close
+              gh api "repos/${REPO}/issues/${ISSUE_NUMBER}/comments" \
+                -f body="This issue has been closed due to 14 days of inactivity after being marked stale. Feel free to reopen if still relevant." \
+                >/dev/null 2>&1
+              gh api "repos/${REPO}/issues/${ISSUE_NUMBER}" \
+                -X PATCH -f state="closed" -f state_reason="not_planned" \
+                >/dev/null 2>&1
+              CLOSED_COUNT=$(( CLOSED_COUNT + 1 ))
+              echo "- Closed issue #${ISSUE_NUMBER}: ${ISSUE_TITLE} (${DAYS_INACTIVE} days inactive)" >> $GITHUB_STEP_SUMMARY
+
+            elif [ "${IS_STALE}" -eq 0 ] && [ "${DAYS_INACTIVE}" -ge 30 ]; then
+              # 30 days inactive -> label stale
+              gh api "repos/${REPO}/issues/${ISSUE_NUMBER}/labels" \
+                -X POST --input - <<< '["stale"]' \
+                >/dev/null 2>&1
+              STALE_COUNT=$(( STALE_COUNT + 1 ))
+              echo "- Marked stale issue #${ISSUE_NUMBER}: ${ISSUE_TITLE} (${DAYS_INACTIVE} days)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          # ---------------------------------------------------------------
+          # Summary
+          # ---------------------------------------------------------------
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Totals for ${{ matrix.repo }}**: ${STALE_COUNT} marked stale, ${CLOSED_COUNT} closed" >> $GITHUB_STEP_SUMMARY
+
+          echo "Processed ${{ matrix.repo }}: ${STALE_COUNT} stale, ${CLOSED_COUNT} closed"

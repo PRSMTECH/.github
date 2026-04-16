@@ -1,0 +1,121 @@
+# =============================================================================
+# PrsmTechInc Daily Digest Workflow
+# =============================================================================
+# Purpose: Post daily activity summary across key repos to Slack
+# Triggers: Weekday schedule (8 AM PDT) and manual dispatch
+#
+# This workflow collects from each monitored repo:
+#   - Open PR count and titles
+#   - Commits to main in last 24 hours
+#   - Open issue count
+#
+# Posts digest to #all-prsmtech Slack channel via Bot API
+# =============================================================================
+
+name: Daily Digest
+
+on:
+  schedule:
+    # 8 AM PDT = 15:00 UTC, weekdays only
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SLACK_CHANNEL: 'C0ARCGQ3CLV'
+  ORG: 'PrsmTechInc'
+
+jobs:
+  # ===========================================================================
+  # Collect and Post Digest
+  # ===========================================================================
+  digest:
+    name: Daily Digest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Collect repo activity and post digest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: |
+          REPOS=("double-you-ios" "double-you-android" "prsm-business" "prsm-ceo")
+          TODAY=$(date -u +"%B %d, %Y")
+          SINCE=$(date -u -d '24 hours ago' +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -v-24H +"%Y-%m-%dT%H:%M:%SZ")
+
+          MESSAGE="*PRSMTECH Daily Digest - ${TODAY}*"
+
+          for REPO in "${REPOS[@]}"; do
+            echo "Processing ${REPO}..."
+
+            # ---------------------------------------------------------------
+            # Open PRs
+            # ---------------------------------------------------------------
+            PR_DATA=$(gh api "repos/${ORG}/${REPO}/pulls?state=open&per_page=100" 2>/dev/null || echo "[]")
+            PR_COUNT=$(echo "${PR_DATA}" | jq 'length')
+            PR_TITLES=$(echo "${PR_DATA}" | jq -r '.[].title' 2>/dev/null)
+
+            # ---------------------------------------------------------------
+            # Commits to main in last 24 hours
+            # ---------------------------------------------------------------
+            COMMIT_DATA=$(gh api "repos/${ORG}/${REPO}/commits?sha=main&since=${SINCE}&per_page=100" 2>/dev/null || echo "[]")
+            COMMIT_COUNT=$(echo "${COMMIT_DATA}" | jq 'length')
+
+            # ---------------------------------------------------------------
+            # Open issues
+            # ---------------------------------------------------------------
+            ISSUE_COUNT=$(gh api "repos/${ORG}/${REPO}/issues?state=open&per_page=1" -i 2>/dev/null \
+              | grep -i 'link:' \
+              | grep -oP '&page=\K[0-9]+(?=>; rel="last")' || echo "0")
+
+            # Fallback: count directly if Link header parsing fails
+            if [ "${ISSUE_COUNT}" = "0" ]; then
+              ISSUE_DATA=$(gh api "repos/${ORG}/${REPO}/issues?state=open&per_page=100" 2>/dev/null || echo "[]")
+              # Filter out PRs (GitHub API returns PRs as issues)
+              ISSUE_COUNT=$(echo "${ISSUE_DATA}" | jq '[.[] | select(.pull_request == null)] | length')
+            fi
+
+            # ---------------------------------------------------------------
+            # Build repo section
+            # ---------------------------------------------------------------
+            SECTION="
+
+          *${REPO}*
+          - ${PR_COUNT} open PRs | ${COMMIT_COUNT} commits today | ${ISSUE_COUNT} open issues"
+
+            if [ "${PR_COUNT}" -gt 0 ] && [ -n "${PR_TITLES}" ]; then
+              while IFS= read -r title; do
+                SECTION="${SECTION}
+          - PR: ${title}"
+              done <<< "${PR_TITLES}"
+            fi
+
+            MESSAGE="${MESSAGE}${SECTION}"
+          done
+
+          # -----------------------------------------------------------------
+          # Post to Slack
+          # -----------------------------------------------------------------
+          curl -s -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg channel "${SLACK_CHANNEL}" \
+              --arg text "${MESSAGE}" \
+              '{channel: $channel, text: $text, unfurl_links: false}'
+            )"
+
+          echo "Daily digest posted to Slack"
+
+          # -----------------------------------------------------------------
+          # Job Summary
+          # -----------------------------------------------------------------
+          echo "## Daily Digest Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Posted to Slack channel: ${SLACK_CHANNEL}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${MESSAGE}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

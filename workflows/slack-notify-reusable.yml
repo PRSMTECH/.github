@@ -1,0 +1,137 @@
+# =============================================================================
+# PrsmTechInc Reusable Slack Notification Workflow
+# =============================================================================
+# Purpose: Post messages to any Slack channel using Bot API (chat.postMessage)
+# Usage: Called via workflow_call from any PRSMTECH repo
+#
+# Features:
+#   - Bot API (chat.postMessage) for proper @mentions
+#   - Hardcoded user ID map for team @mentions
+#   - Thread reply support
+#   - ASCII-only output (no unicode bullets)
+#
+# Requirements:
+#   - SLACK_BOT_TOKEN secret with chat:write scope
+# =============================================================================
+
+name: Slack Notify (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      channel_id:
+        description: 'Slack channel ID (e.g. C0ARPUFUY0M)'
+        required: true
+        type: string
+      message:
+        description: 'Message text to post'
+        required: true
+        type: string
+      thread_ts:
+        description: 'Thread timestamp to reply in thread (optional)'
+        required: false
+        type: string
+        default: ''
+      mention_users:
+        description: 'Comma-separated list of usernames to @mention (e.g. "usman,dean,firza")'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      SLACK_BOT_TOKEN:
+        required: true
+
+# -----------------------------------------------------------------------------
+# Channel ID Reference (for callers):
+#   ios / doubleview / product  = C0ARPUFUY0M
+#   all / summary               = C0ARCGQ3CLV
+# -----------------------------------------------------------------------------
+
+jobs:
+  notify:
+    name: Post to Slack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build mention string and post message
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          CHANNEL_ID: ${{ inputs.channel_id }}
+          RAW_MESSAGE: ${{ inputs.message }}
+          THREAD_TS: ${{ inputs.thread_ts }}
+          MENTION_USERS: ${{ inputs.mention_users }}
+        run: |
+          # ---------------------------------------------------------------
+          # Slack User ID Map
+          # ---------------------------------------------------------------
+          declare -A USER_MAP
+          USER_MAP[jordan]="U0AR9HCHT9R"
+          USER_MAP[usman]="U0ARBVCRGG7"
+          USER_MAP[asad]="U0ARC007WBZ"
+          USER_MAP[dean]="U0ARQ1AUFLM"
+          USER_MAP[firza]="U0ASMMGFVDW"
+          USER_MAP[haseeb]="U0ASMMJQX32"
+          USER_MAP[ted]="U0ARRBL6Z54"
+          USER_MAP[joey]="U0ARTDHTCRY"
+
+          # ---------------------------------------------------------------
+          # Build @mention prefix from comma-separated usernames
+          # ---------------------------------------------------------------
+          MENTION_PREFIX=""
+          if [ -n "$MENTION_USERS" ]; then
+            IFS=',' read -ra NAMES <<< "$MENTION_USERS"
+            for name in "${NAMES[@]}"; do
+              name=$(echo "$name" | xargs)  # trim whitespace
+              name_lower=$(echo "$name" | tr '[:upper:]' '[:lower:]')
+              uid="${USER_MAP[$name_lower]}"
+              if [ -n "$uid" ]; then
+                MENTION_PREFIX="${MENTION_PREFIX}<@${uid}> "
+              else
+                echo "::warning::Unknown Slack user: ${name}"
+              fi
+            done
+          fi
+
+          # ---------------------------------------------------------------
+          # Compose final message (mentions + body)
+          # ---------------------------------------------------------------
+          if [ -n "$MENTION_PREFIX" ]; then
+            FULL_MESSAGE="${MENTION_PREFIX}
+          ${RAW_MESSAGE}"
+          else
+            FULL_MESSAGE="${RAW_MESSAGE}"
+          fi
+
+          # ---------------------------------------------------------------
+          # Build JSON payload
+          # ---------------------------------------------------------------
+          PAYLOAD=$(jq -n \
+            --arg channel "$CHANNEL_ID" \
+            --arg text "$FULL_MESSAGE" \
+            '{channel: $channel, text: $text}')
+
+          # Add thread_ts if provided
+          if [ -n "$THREAD_TS" ]; then
+            PAYLOAD=$(echo "$PAYLOAD" | jq --arg ts "$THREAD_TS" '. + {thread_ts: $ts}')
+          fi
+
+          # ---------------------------------------------------------------
+          # Post via Slack Bot API
+          # ---------------------------------------------------------------
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            https://slack.com/api/chat.postMessage)
+
+          # ---------------------------------------------------------------
+          # Validate response
+          # ---------------------------------------------------------------
+          OK=$(echo "$RESPONSE" | jq -r '.ok')
+          if [ "$OK" != "true" ]; then
+            ERROR=$(echo "$RESPONSE" | jq -r '.error // "unknown error"')
+            echo "::error::Slack API error: ${ERROR}"
+            exit 1
+          fi
+
+          TS=$(echo "$RESPONSE" | jq -r '.ts')
+          echo "Posted to ${CHANNEL_ID} (ts: ${TS})"

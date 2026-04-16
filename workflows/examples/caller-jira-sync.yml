@@ -1,0 +1,19 @@
+# Jira Sync - Caller Workflow
+# Copy this file to your repo's .github/workflows/jira-sync.yml
+# Syncs PRs with Jira issues (transitions + comments + Slack)
+
+name: Jira Sync
+
+on:
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  jira-sync:
+    uses: PRSMTECH/.github/.github/workflows/jira-sync-reusable.yml@main
+    with:
+      slack_channel_id: 'C0ARPUFUY0M'
+      slack_channel_name: 'ios-doubleview'
+    secrets:
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

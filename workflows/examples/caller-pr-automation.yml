@@ -1,0 +1,14 @@
+# Example: Call the reusable PR automation workflow from any repo
+# Copy this file to your repo's .github/workflows/ directory
+
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  automate:
+    uses: PrsmTechInc/.github/.github/workflows/pr-automation-reusable.yml@main
+    with:
+      default_reviewer: 'MrJPTech'

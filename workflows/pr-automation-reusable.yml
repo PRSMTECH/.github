@@ -1,0 +1,182 @@
+# =============================================================================
+# PrsmTechInc Reusable PR Automation Workflow
+# =============================================================================
+# Purpose: Auto-label PRs by file paths and branch prefix, auto-assign reviewer
+# Usage: Called via workflow_call from any PRSMTECH repo
+#
+# Features:
+#   - File-path-based labeling (ios, android, web, python, docs, ci, styling)
+#   - Branch-prefix-based labeling (bug-fix, feature, refactor, chore)
+#   - Auto-assign default reviewer on PR open
+#
+# Requirements:
+#   - GITHUB_TOKEN (automatic, no extra secrets needed)
+# =============================================================================
+
+name: PR Automation (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      default_reviewer:
+        description: 'GitHub username to auto-assign as reviewer'
+        required: false
+        type: string
+        default: 'MrJPTech'
+
+jobs:
+  label-and-assign:
+    name: Label & Assign
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      # -----------------------------------------------------------------
+      # Step 1: Get changed files
+      # -----------------------------------------------------------------
+      - name: Get changed files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FILES=$(gh api \
+            repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
+            --jq '.[].filename' \
+            --paginate)
+          # Write to file for multi-line safety
+          echo "$FILES" > /tmp/changed_files.txt
+          echo "count=$(echo "$FILES" | wc -l)" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------
+      # Step 2: Determine labels from file paths
+      # -----------------------------------------------------------------
+      - name: Determine file-path labels
+        id: path_labels
+        run: |
+          LABELS=""
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+
+            case "$file" in
+              *.swift|*.xcodeproj|*.xcodeproj/*)
+                LABELS="${LABELS}ios,"
+                ;;
+              *.kt|*.gradle|*.gradle.*)
+                LABELS="${LABELS}android,"
+                ;;
+              *.ts|*.tsx|*.js|*.jsx)
+                LABELS="${LABELS}web,"
+                ;;
+              *.py)
+                LABELS="${LABELS}python,"
+                ;;
+              *.md|docs/*)
+                LABELS="${LABELS}docs,"
+                ;;
+              .github/*.yml|.github/*.yaml)
+                LABELS="${LABELS}ci,"
+                ;;
+              *.css|*.scss|*tailwind*)
+                LABELS="${LABELS}styling,"
+                ;;
+            esac
+          done < /tmp/changed_files.txt
+
+          # Deduplicate
+          if [ -n "$LABELS" ]; then
+            LABELS=$(echo "$LABELS" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+          fi
+
+          echo "labels=${LABELS}" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------
+      # Step 3: Determine labels from branch prefix
+      # -----------------------------------------------------------------
+      - name: Determine branch-prefix labels
+        id: branch_labels
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          LABEL=""
+
+          case "$BRANCH" in
+            fix/*)
+              LABEL="bug-fix"
+              ;;
+            feat/*|feature/*)
+              LABEL="feature"
+              ;;
+            refactor/*)
+              LABEL="refactor"
+              ;;
+            chore/*)
+              LABEL="chore"
+              ;;
+          esac
+
+          echo "label=${LABEL}" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------
+      # Step 4: Apply all labels
+      # -----------------------------------------------------------------
+      - name: Apply labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PATH_LABELS="${{ steps.path_labels.outputs.labels }}"
+          BRANCH_LABEL="${{ steps.branch_labels.outputs.label }}"
+
+          # Merge all labels
+          ALL_LABELS=""
+          if [ -n "$PATH_LABELS" ]; then
+            ALL_LABELS="$PATH_LABELS"
+          fi
+          if [ -n "$BRANCH_LABEL" ]; then
+            if [ -n "$ALL_LABELS" ]; then
+              ALL_LABELS="${ALL_LABELS},${BRANCH_LABEL}"
+            else
+              ALL_LABELS="$BRANCH_LABEL"
+            fi
+          fi
+
+          if [ -z "$ALL_LABELS" ]; then
+            echo "No labels to apply"
+            exit 0
+          fi
+
+          echo "Applying labels: ${ALL_LABELS}"
+
+          # Ensure labels exist (create if missing)
+          IFS=',' read -ra LABEL_ARRAY <<< "$ALL_LABELS"
+          for label in "${LABEL_ARRAY[@]}"; do
+            gh label create "$label" \
+              --repo "${{ github.repository }}" \
+              --force 2>/dev/null || true
+          done
+
+          # Apply labels to PR
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "$ALL_LABELS"
+
+      # -----------------------------------------------------------------
+      # Step 5: Auto-assign reviewer
+      # -----------------------------------------------------------------
+      - name: Assign reviewer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REVIEWER="${{ inputs.default_reviewer }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+
+          # Skip if PR author is the reviewer
+          if [ "$PR_AUTHOR" = "$REVIEWER" ]; then
+            echo "PR author is the default reviewer - skipping assignment"
+            exit 0
+          fi
+
+          echo "Assigning reviewer: ${REVIEWER}"
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-reviewer "$REVIEWER"
