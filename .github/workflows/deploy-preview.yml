@@ -1,0 +1,160 @@
+# =============================================================================
+# PrsmTechInc Vercel Preview Deployment
+# =============================================================================
+# Purpose: Deploy preview environments for Pull Requests
+# Triggers: Pull Request events
+#
+# This workflow:
+#   - Deploys a preview build to Vercel
+#   - Posts the preview URL as a PR comment
+#   - Updates comment on subsequent pushes
+#
+# Required Secrets:
+#   - VERCEL_TOKEN: Personal access token from Vercel
+#   - VERCEL_ORG_ID: Organization ID (from .vercel/project.json or Vercel dashboard)
+#   - VERCEL_PROJECT_ID: Project ID (from .vercel/project.json or Vercel dashboard)
+#
+# Setup Instructions:
+#   1. Install Vercel CLI: pnpm add -g vercel
+#   2. Run `vercel link` to connect your project
+#   3. Get IDs from .vercel/project.json
+#   4. Create Vercel token at https://vercel.com/account/tokens
+#   5. Add secrets to GitHub repo settings
+# =============================================================================
+
+name: Deploy Preview
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+# Ensure only one deployment per PR at a time
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  # ===========================================================================
+  # Deploy Preview to Vercel
+  # ===========================================================================
+  deploy:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+
+    # Required for posting PR comments
+    permissions:
+      pull-requests: write
+      contents: read
+
+    outputs:
+      preview-url: ${{ steps.deploy.outputs.url }}
+      deployment-id: ${{ steps.deploy.outputs.deployment-id }}
+
+    steps:
+      # -----------------------------------------------------------------------
+      # Checkout & Setup
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      # -----------------------------------------------------------------------
+      # Pull Vercel Environment Configuration
+      # -----------------------------------------------------------------------
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      # -----------------------------------------------------------------------
+      # Build & Deploy
+      # -----------------------------------------------------------------------
+      - name: Build Project
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Preview URL: $DEPLOYMENT_URL"
+
+      # -----------------------------------------------------------------------
+      # Post/Update PR Comment
+      # -----------------------------------------------------------------------
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- vercel-preview-comment -->'
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- vercel-preview-comment -->
+            ## 🚀 Preview Deployment
+
+            | Status | Preview URL | Commit |
+            |--------|-------------|--------|
+            | ✅ Ready | [${{ steps.deploy.outputs.url }}](${{ steps.deploy.outputs.url }}) | ${{ github.sha }} |
+
+            <details>
+            <summary>📋 Deployment Details</summary>
+
+            - **Branch:** `${{ github.head_ref }}`
+            - **PR:** #${{ github.event.pull_request.number }}
+            - **Deployed at:** ${{ github.event.pull_request.updated_at }}
+            - **Workflow:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            </details>
+
+            ---
+            <sub>Deployed by [PrsmTechInc](https://github.com/PrsmTechInc) using Vercel</sub>
+
+  # ===========================================================================
+  # Optional: Run E2E Tests on Preview
+  # ===========================================================================
+  # Uncomment this job if you want to run Playwright tests against the preview
+  #
+  # e2e-preview:
+  #   name: E2E Tests
+  #   runs-on: ubuntu-latest
+  #   needs: deploy
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #
+  #     - name: Install dependencies
+  #       run: pnpm install
+  #
+  #     - name: Install Playwright browsers
+  #       run: pnpm exec playwright install --with-deps chromium
+  #
+  #     - name: Run E2E tests
+  #       run: pnpm test:e2e
+  #       env:
+  #         BASE_URL: ${{ needs.deploy.outputs.preview-url }}

@@ -1,0 +1,18 @@
+# Example: Call the reusable Slack notify workflow from any repo
+# Copy this file to your repo's .github/workflows/ directory
+
+name: Slack Notify on Push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    uses: PrsmTechInc/.github/.github/workflows/slack-notify-reusable.yml@main
+    with:
+      channel_id: 'C0ARPUFUY0M'
+      message: 'New push to main in ${{ github.repository }} by ${{ github.actor }}'
+      mention_users: 'jordan,dean'
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
