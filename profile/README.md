@@ -45,7 +45,7 @@
 
 | Repository | What it is | Stack |
 |:-----------|:-----------|:------|
-| [**macro-pickle**](https://github.com/PRSMTECH/macro-pickle) | Internal AI content pipeline — GitHub Issues intake, multi-language generation (Gemini), AI image pipeline (Imagen), idempotent sync | TypeScript · Next.js |
+| [**macro-pickle**](https://github.com/MrJPTech/macro-pickle) | Local, database-free AI creative toolkit — typed, brand-aware Prompt Engine + image/video generation (Imagen · Veo · Kling · fal.ai), driven through Claude via MCP | TypeScript · MCP |
 | [**demo-sites**](https://github.com/PRSMTECH/demo-sites) | Brief → themed deployable website pipeline — **live at [prsmtechdemos.com](https://www.prsmtechdemos.com)** | Next.js 16 · Tailwind v4 · Stripe |
 | [**MJB-TrailStashCo**](https://github.com/PRSMTECH/MJB-TrailStashCo) | TrailStash Co. — production outdoor-gear e-commerce storefront | Next.js · Tailwind · Stripe |
 | [**macbook-turbo**](https://github.com/PRSMTECH/macbook-turbo) | macOS system optimizer & CPU monitor for power users | Python |
@@ -68,7 +68,7 @@ Our flagship client and internal products keep their source private — each has
 | [double-you-android](https://github.com/PRSMTECH/double-you-android-showcase) | Double View — dual-camera app (20K+ downloads on iOS App Store, Android build) |
 | [prsm-saas](https://github.com/PRSMTECH/prsm-saas-showcase) | 39-product SaaS marketplace |
 | [prsmtech-smca](https://github.com/PRSMTECH/prsmtech-smca-showcase) | 7-agent social media automation (Google ADK) |
-| [stitch-prsmtech](https://github.com/PRSMTECH/stitch-prsmtech-showcase) | AI UI-generation platform (Google Stitch SDK) |
+| [stitch-prsmtech](https://github.com/PRSMTECH/stitch-prsmtech) | AI UI-generation platform (Google Stitch SDK) — **full source public** |
 | [snow-flow](https://github.com/PRSMTECH/snow-flow-showcase) | Veo 3 AI video-generation pipeline |
 | [prsm-ad-shield](https://github.com/PRSMTECH/prsm-ad-shield-showcase) | Chrome extension — ad blocking + stream detection |
 | [readi-presi](https://github.com/PRSMTECH/readi-presi-showcase) | Universal pitch-deck builder |
